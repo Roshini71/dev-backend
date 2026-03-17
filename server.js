@@ -17,6 +17,7 @@ mongoose.connect("mongodb://127.0.0.1:27017/location-attendance").then(() => {
 // Updated User Schema without email verification
 const UserSchema = new mongoose.Schema({
   username: { type: String, unique: true },
+  email: { type: String, unique: true },
   password: String,
 });
 const User = mongoose.model("User", UserSchema);
@@ -36,8 +37,21 @@ const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5500',
+  'http://127.0.0.1:5500',
+  'http://127.0.0.1:3000'
+];
+
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: (origin, callback) => {
+    // Allow non-browser requests and same-origin requests.
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 app.use(express.static(path.join(__dirname, '../frontend')));
@@ -52,13 +66,14 @@ app.use(session({
 // Updated Signup API
 app.post('/api/signup', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password, email } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({ message: 'Username and password required' });
+    if (!username || !password || !email) {
+      return res.status(400).json({ message: 'Username, email and password required' });
     }
 
     const existingUser = await User.findOne({ username });
+    const existingEmail = await User.findOne({ email });
 
     if (existingUser) {
       return res.status(409).json({
@@ -66,10 +81,17 @@ app.post('/api/signup', async (req, res) => {
       });
     }
 
+    if (existingEmail) {
+      return res.status(409).json({
+        message: 'Email already exists'
+      });
+    }
+
     const hash = await bcrypt.hash(password, 10);
 
     const user = new User({
       username,
+      email,
       password: hash
     });
 
@@ -105,6 +127,7 @@ app.post('/api/login', async (req, res) => {
         const hash = await bcrypt.hash('admin123', 10);
         user = new User({
           username: 'admin',
+          email: 'admin@local.dev',
           password: hash
         });
         await user.save();
