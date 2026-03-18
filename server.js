@@ -194,8 +194,8 @@ function requireAdmin(req, res, next) {
   }
 }
 
-const OFFICE_LAT = 11.269888;
-const OFFICE_LON = 77.602258;
+const OFFICE_LAT = 11.274127;
+const OFFICE_LON = 77.607096;
 const GEOFENCE_RADIUS_METERS = 500;
 
 function getDistance(lat1, lon1, lat2, lon2) {
